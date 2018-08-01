@@ -1,0 +1,38 @@
+<?php
+
+/**
+ * Implement hook_form_FORM_ID_alter
+ * To add a validator
+ */
+function eatlas_file_url_aliases_form_media_edit_alter(&$form, &$form_state, $form_id) {
+	// Add a function to the validation workflow
+	if (isset($form['#validate'])) {
+		$form['#validate'][] = '_eatlas_file_url_aliases_form_validate';
+	}
+}
+
+function _eatlas_file_url_aliases_form_validate($form, &$form_state) {
+	// Grab the current file
+	$file = $form['#entity'];
+	$source = 'media/' . $file->fid;
+
+	if (isset($form['field_file_url_aliases'][LANGUAGE_NONE])) {
+		$elements = $form['field_file_url_aliases'][LANGUAGE_NONE];
+		foreach ($elements as $element) {
+			if (is_array($element) && isset($element['value'])) {
+				$value = $element['value'];
+				if (isset($value['#value']) && $value['#value'] !== '') {
+					$url_alias = $value['#value'];
+
+					if ($url_alias{0} === '/' || $url_alias{strlen($url_alias) - 1} === '/') {
+						form_error($value, "URL alias must not starts or ends with a slash: <em>$url_alias</em>");
+					} else if (_eatlas_file_url_aliases_field_alias_defined_elsewhere($source, $url_alias)) {
+						form_error($value, "URL alias is already in used: <em>$url_alias</em>");
+					}
+				}
+			}
+		}
+	}
+}
+
+?>

@@ -1,0 +1,17 @@
+; $Id$
+name = eAtlas file URL aliases
+description = [eatlas_file_url_aliases] Create a URL aliases field in file forms to manage URL aliases for files. It doesn't modify the DB structure, it's simply a user friendly interface for "Configuration > Search and Metadata > URL aliases". The uninstall process do NOT remove any created URL aliases. If you want to revert the URL aliases after uninstalling this module, you will have to use the Drupal UI.
+core = 7.x
+
+files[] = eatlas_file_url_aliases.module
+
+package = eAtlas
+
+dependencies[] = file_entity
+dependencies[] = eatlas_file_url_aliases_field
+
+; Attributes used by the update module.
+; There fields needs to be removed if the module is migrated to Drupal.org
+project status url = "http://drupal.eatlas.org.au/modules/eatlas"
+version = "7.x-1.0"
+project = "eatlas_file_url_aliases"

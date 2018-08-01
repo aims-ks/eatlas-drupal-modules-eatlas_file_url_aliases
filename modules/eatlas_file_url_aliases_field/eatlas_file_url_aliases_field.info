@@ -1,0 +1,12 @@
+; $Id$
+name = eAtlas file URL aliases field storage
+description = [eatlas_file_url_aliases_field] Define a how to store the file URL aliases.
+core = 7.x
+
+files[] = eatlas_file_url_aliases_field.module
+
+package = eAtlas
+
+dependencies[] = file_entity
+
+; This is a sub-module, it does not need the attributes used by the update module.

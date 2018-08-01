@@ -1,0 +1,116 @@
+<?php
+// TODO: The fields are cached, so manually added aliases wont appear in
+//     the form until the user clear the cache. We need to set the cache
+//     to false OR call field_cache_clear() at some point...
+
+/**
+ * Implements: hook_field_storage_info
+ * Used to associate the storage hooks with this module.
+ *     Read: hook_field_storage_load (eatlas_file_url_aliases_field_field_storage_load)
+ *     Write: hook_field_storage_write (eatlas_file_url_aliases_field_field_storage_write)
+ * NOTE: To use this module as a Storage module, you need to
+ *     define the storage config in the form field.
+ *     (see eatlas_file_url_aliases.install for more info)
+ */
+function eatlas_file_url_aliases_field_field_storage_info() {
+	return array(
+		'eatlas_file_url_aliases_field_storage' => array(
+			'label' => t('Store as URL Aliases'),
+			'description' => t('Stores fields in the URL Aliases table.'),
+			'settings' => array(),
+		),
+	);
+}
+
+/**
+ * Implements: hook_field_storage_load
+ * Load the file URL aliases from the URL aliases table
+ * $age: FIELD_LOAD_CURRENT or FIELD_LOAD_REVISION (ignored)
+ */
+function eatlas_file_url_aliases_field_field_storage_load($entity_type, $entities, $age, $fields, $options) {
+	if ($entity_type === 'file') {
+		foreach ($fields as $field_id => $ids) {
+			$field = field_info_field_by_id($field_id);
+			$field_name = $field['field_name'];
+
+			foreach ($ids as $delta => $fid) {
+				// $file = $entities[$fid];
+				$source = 'media/' . $fid;
+				$aliases = _eatlas_file_url_aliases_field_get_aliases($source);
+
+				if ($aliases) {
+					$new_value = array();
+					foreach ($aliases as $pid => $alias) {
+						$new_value[] = array(
+							'value' => $alias->alias,
+							'safe_value' => strip_tags($alias->alias)
+						);
+					}
+
+					$entities[$fid]->{$field_name}[LANGUAGE_NONE] = $new_value;
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Implements: hook_field_storage_write
+ * Save the file URL aliases in the URL aliases table
+ * $op: FIELD_STORAGE_UPDATE or FIELD_STORAGE_INSERT (ignored)
+ */
+function eatlas_file_url_aliases_field_field_storage_write($entity_type, $entity, $op, $fields) {
+	if ($entity_type === 'file') {
+		foreach ($fields as $field_id) {
+			$field = field_info_field_by_id($field_id);
+			$field_name = $field['field_name'];
+
+			$file = $entity;
+			$source = 'media/' . $file->fid;
+
+			if (isset($entity->{$field_name}[LANGUAGE_NONE])) {
+				$items = (array) $entity->{$field_name}[LANGUAGE_NONE];
+
+				// Remove all URL aliases for this file
+				path_delete(array('source' => $source));
+
+				foreach ($items as $delta => $item) {
+					$url_alias = $item['value'];
+
+					if (_eatlas_file_url_aliases_field_alias_defined($url_alias)) {
+						// NOTE: The check is done once more to avoid racing condition
+						// (i.e. someone manage to insert the same alias between the execution of the validator and the execution of the form submit)
+						watchdog('eatlas_file_url_aliases_field', "URL alias is already in used: <em>$url_alias</em>", array(), WATCHDOG_ERROR);
+					} else {
+						$path = array(
+							'source' => $source,
+							'alias' => $url_alias
+						);
+						path_save($path);
+					}
+				}
+			}
+		}
+	}
+}
+
+// NOTE: Similar to path_load, but returns ALL matches.
+//     https://api.drupal.org/api/drupal/includes%21path.inc/function/path_load/7
+function _eatlas_file_url_aliases_field_get_aliases($source) {
+	$select = db_select('url_alias');
+	$select->condition('source', $source);
+	return $select->fields('url_alias')->execute()->fetchAllAssoc('pid');
+}
+
+// Returns TRUE if the alias is in used
+function _eatlas_file_url_aliases_field_alias_defined($url_alias) {
+	return drupal_lookup_path('source', $url_alias) === FALSE ? FALSE : TRUE;
+}
+
+// Return TRUE if the alias is in used by an other node / file than the current one ($source).
+function _eatlas_file_url_aliases_field_alias_defined_elsewhere($source, $url_alias) {
+	$existing_path = drupal_lookup_path('source', $url_alias);
+	return ($existing_path !== FALSE && $existing_path !== $source) ? TRUE : FALSE;
+}
+
+?>

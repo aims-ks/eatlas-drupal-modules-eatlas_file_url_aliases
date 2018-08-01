@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * Implement: hook_install
+ */
+function eatlas_file_url_aliases_install() {
+	$bundles = array('audio', 'image', 'video', 'default');
+
+	// Add new fields
+	foreach (_eatlas_file_url_aliases_fields() as $field) {
+		field_create_field($field);
+		foreach ($bundles as $bundle) {
+			$field['entity_type'] = 'file';
+			$field['bundle'] = $bundle;
+			field_create_instance($field);
+		}
+	}
+}
+
+/**
+ * Implement: hook_uninstall
+ */
+function eatlas_file_url_aliases_uninstall() {
+	$bundles = array('audio', 'image', 'video', 'default');
+
+	// Delete added fields
+	foreach (_eatlas_file_url_aliases_fields() as $field) {
+		foreach ($bundles as $bundle) {
+			$field['entity_type'] = 'file';
+			$field['bundle'] = $bundle;
+			field_delete_instance($field, true);
+		}
+		field_delete_field($field);
+	}
+}
+
+
+function _eatlas_file_url_aliases_fields() {
+	// https://api.drupal.org/api/drupal/modules!field!field.module/group/field/7
+	return array(
+		'field_file_url_aliases' => array(
+			'field_name' => 'field_file_url_aliases',
+			'label' => t('URL Aliases'),
+			'cardinality' => -1,
+			'type' => 'text',
+			'settings' => array(
+				'max_length' => 1024
+			),
+			// Define how the field should be stored (define read / write)
+			'storage' => array(
+				'type' => 'eatlas_file_url_aliases_field_storage'
+			),
+			'widget' => array(
+				'type' => 'text_textfield'
+			)
+		)
+	);
+}
+
+?>
